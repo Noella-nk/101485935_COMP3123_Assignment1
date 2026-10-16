@@ -9,6 +9,6 @@ const authRateLimit = rateLimit({
   message: {
     message: "Too many authentication attempts. Please try again in 15 minutes.",
   },
-});
+})
 
-module.exports = authRateLimit;
+module.exports = authRateLimit

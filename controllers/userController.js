@@ -8,52 +8,55 @@ const signup = async (request, response) => {
     const { username, email, password } = request.body;
 
     const existingUser = await User.findOne({
-      $or: [{ username }, { email }]
-    })
+      $or: [{ username }, { email }],
+    });
 
     if (existingUser) {
       return response.status(409).json({
-        message: "Username or email already exists",
-      })
+        message: "Username or email is already registered",
+      });
     }
 
-    const user = await User.create({ username, email, password })
+    const user = await User.create({
+      username,
+      email,
+      password,
+    });
 
     return response.status(201).json({
       message: "User registered successfully",
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-    })
+    });
   } catch (error) {
-    // Handle duplicate-key errors, including simultaneous registrations
     if (error.code === 11000) {
       return response.status(409).json({
         message: "Username or email is already registered",
-    });
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      return response.status(400).json({ message: error.message });
+    }
+
+    return response.status(500).json({ message: "Server error" });
   }
-
-if (error.name === "ValidationError") {
-  return response.status(400).json({message: error.message})
-}
-
-return response.status(500).json({message: "Server error. Please try again later."})
-
 };
 
-// Log in an existing user
+// Log in using either username or email
 const login = async (request, response) => {
   try {
-    const { username, email, password } = request.body
+    const { username, email, password } = request.body;
 
     if (!password || (!username && !email)) {
       return response.status(400).json({
-        message: "Provide a username or email and a password!",
-      })
+        message: "Provide a username or email and a password",
+      });
     }
 
     const identifier = username || email;
@@ -69,7 +72,7 @@ const login = async (request, response) => {
     }
 
     if (!process.env.JWT_SECRET) {
-      return res.status(500).json({
+      return response.status(500).json({
         message: "Server authentication configuration error",
       });
     }
@@ -83,7 +86,7 @@ const login = async (request, response) => {
       { expiresIn: "1h" }
     );
 
-    return res.status(200).json({
+    return response.status(200).json({
       message: "Login successful",
       token,
       user: {
@@ -93,10 +96,11 @@ const login = async (request, response) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: "Server error" });
+    return response.status(500).json({ message: "Server error" });
   }
 };
 
-module.exports = { signup, login,}
-
-}
+module.exports = {
+  signup,
+  login,
+};

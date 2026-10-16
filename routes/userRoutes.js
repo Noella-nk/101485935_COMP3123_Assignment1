@@ -4,7 +4,8 @@ const router = express.Router()
 
 const authRateLimit = require("../middleware/authRateLimit")
 
-const { signup, login } = require("../controllers/userController")
+const { signup, login } 
+= require("../controllers/userController")
 
 const {
   signupValidation,
@@ -12,17 +13,19 @@ const {
   validateRequest,
 } = require("../validators/userValidator");
 
-router.post("/signup", 
+router.post(
+    "/signup", 
     authRateLimit, 
     signupValidation, 
     validateRequest, 
     signup)
 
-    
-router.post("/login", 
+
+router.post(
+    "/login", 
     authRateLimit, 
     loginValidation, 
     validateRequest, 
-    login);
+    login)
 
 module.exports = router;
