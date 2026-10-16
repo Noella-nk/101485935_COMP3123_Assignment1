@@ -1,7 +1,14 @@
 
 const express = require("express");
 const router = express.Router();
+
 const auth = require("../middleware/auth");
+
+const {
+  employeeValidation,
+  employeeUpdateValidation,
+  validateRequest,
+} = require("../validators/employeeValidator")
 
 const {
   createEmployee,
@@ -11,17 +18,13 @@ const {
   deleteEmployee,
 } = require("../controllers/employeeController")
 
-const {
-  employeeValidation,
-  employeeUpdateValidation,
-  validateRequest,
-} = require("../validators/employeeValidator")
+// GET all employees belonging to the logged-in user
+router.get("/employees", auth, getAllEmployees);
 
-router.post("/", auth, employeeValidation, validateRequest, createEmployee)
-router.get("/", auth, getAllEmployees)
-router.get("/:id", auth, getEmployeeById)
-router.put("/:id", auth, employeeUpdateValidation, validateRequest, updateEmployee)
-router.delete("/:id", auth, deleteEmployee)
+router.post("/employees", auth, employeeValidation, validateRequest, createEmployee)
+router.get("/employees/:eid", auth, getEmployeeById)
+router.put("/employees/:eid", auth, employeeUpdateValidation, validateRequest, updateEmployee)
+router.delete("/employees", auth, deleteEmployee)
 
 module.exports = router;
 

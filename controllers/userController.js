@@ -3,72 +3,82 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
 // Register a new user
-exports.signup = async (req, res) => {
+const signup = async (request, response) => {
   try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({
-        message: "Username, email, and password are required",
-      });
-    }
+    const { username, email, password } = request.body;
 
     const existingUser = await User.findOne({
-      email: email.toLowerCase().trim(),
-    });
+      $or: [{ username }, { email }]
+    })
 
     if (existingUser) {
-      return res.status(409).json({
-        message: "Email already exists",
-      });
+      return response.status(409).json({
+        message: "Username or email already exists",
+      })
     }
 
-    const user = new User({ username, email, password });
-    await user.save();
+    const user = await User.create({ username, email, password })
 
-    return res.status(201).json({
+    return response.status(201).json({
       message: "User registered successfully",
       user: {
         id: user._id,
         username: user.username,
         email: user.email,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
-    });
+    })
   } catch (error) {
-    console.error("Signup error:", error.message);
-    return res.status(500).json({
-      message: "Failed to register user",
+    // Handle duplicate-key errors, including simultaneous registrations
+    if (error.code === 11000) {
+      return response.status(409).json({
+        message: "Username or email is already registered",
     });
   }
+
+if (error.name === "ValidationError") {
+  return response.status(400).json({message: error.message})
+}
+
+return response.status(500).json({message: "Server error. Please try again later."})
+
 };
 
 // Log in an existing user
-exports.login = async (req, res) => {
+const login = async (request, response) => {
   try {
-    const { email, password } = req.body;
+    const { username, email, password } = request.body
 
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required",
-      });
+    if (!password || (!username && !email)) {
+      return response.status(400).json({
+        message: "Provide a username or email and a password!",
+      })
     }
 
+    const identifier = username || email;
+
     const user = await User.findOne({
-      email: email.toLowerCase().trim(),
-    });
+      [username ? "username" : "email"]: identifier,
+    }).select("+password");
 
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({
-        message: "Invalid email or password",
+      return response.status(401).json({
+        message: "Invalid username/email or password",
       });
     }
 
     if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is missing from .env");
+      return res.status(500).json({
+        message: "Server authentication configuration error",
+      });
     }
 
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      {
+        id: user._id.toString(),
+        email: user.email,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -76,11 +86,17 @@ exports.login = async (req, res) => {
     return res.status(200).json({
       message: "Login successful",
       token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+      },
     });
   } catch (error) {
-    console.error("Login error:", error.message);
-    return res.status(500).json({
-      message: "Failed to log in",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
+module.exports = { signup, login,}
+
+}

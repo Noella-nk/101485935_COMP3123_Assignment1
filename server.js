@@ -37,10 +37,10 @@ app.get("/health", (req, res) => {
 
 
  // User authentication routes
-app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/v1/user", require("./routes/userRoutes"));
 
 // Employee routes
-app.use("/api/employees", require("./routes/employeeRoutes"));
+app.use("/api/v1/emp", require("./routes/employeeRoutes"));
 
 
 // Handle unknown routes
