@@ -9,13 +9,19 @@ const {
   getEmployeeById,
   updateEmployee,
   deleteEmployee,
-} = require("../controllers/employeeController");
+} = require("../controllers/employeeController")
 
-router.post("/", auth, createEmployee);
-router.get("/", auth, getAllEmployees);
-router.get("/:id", auth, getEmployeeById);
-router.put("/:id", auth, updateEmployee);
-router.delete("/:id", auth, deleteEmployee);
+const {
+  employeeValidation,
+  employeeUpdateValidation,
+  validateRequest,
+} = require("../validators/employeeValidator")
+
+router.post("/", auth, employeeValidation, validateRequest, createEmployee)
+router.get("/", auth, getAllEmployees)
+router.get("/:id", auth, getEmployeeById)
+router.put("/:id", auth, employeeUpdateValidation, validateRequest, updateEmployee)
+router.delete("/:id", auth, deleteEmployee)
 
 module.exports = router;
 
