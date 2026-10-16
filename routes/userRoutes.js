@@ -1,8 +1,10 @@
 
-const express = require("express");
-const router = express.Router();
+const express = require("express")
+const router = express.Router()
 
-const { signup, login } = require("../controllers/userController");
+const authRateLimit = require("../middleware/authRateLimit")
+
+const { signup, login } = require("../controllers/userController")
 
 const {
   signupValidation,
@@ -10,7 +12,17 @@ const {
   validateRequest,
 } = require("../validators/userValidator");
 
-router.post("/signup", signupValidation, validateRequest, signup);
-router.post("/login", loginValidation, validateRequest, login);
+router.post("/signup", 
+    authRateLimit, 
+    signupValidation, 
+    validateRequest, 
+    signup)
+
+    
+router.post("/login", 
+    authRateLimit, 
+    loginValidation, 
+    validateRequest, 
+    login);
 
 module.exports = router;
