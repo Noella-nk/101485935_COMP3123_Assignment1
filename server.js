@@ -1,10 +1,11 @@
 
 require("dotenv").config();
+const connectDB = require("./config/database");
 
-const express = require("express");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
+const express = require("express")
+const helmet = require("helmet")
+const morgan = require("morgan")
+const rateLimit = require("express-rate-limit")
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +44,18 @@ app.use((req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start application:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
+
