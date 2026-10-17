@@ -2,9 +2,7 @@
 
 ## 1. Overview
 
-The Employee Management API is a RESTful backend application developed using Node.js, Express.js, and MongoDB Atlas. It provides user registration and login, JWT-based authentication, and employee record management.
-
-Each employee record is associated with the authenticated user who created it. Users can manage their own employee records but cannot access another user's records.
+This is a backend for COMP 3123 Assignment 1. It's a REST API built with Node.js, Express and MongoDB Atlas. Users can sign up and log in, and once they're logged in they can create and manage their own employees. Every employee belongs to the user who created it, so nobody can see or change another user's employees.
 
 ## 2. Technologies Used
 
@@ -16,21 +14,40 @@ Each employee record is associated with the authenticated user who created it. U
 - **bcryptjs** — Password hashing.
 - **express-validator** — Request validation.
 - **Helmet** — HTTP security headers.
-- **express-rate-limit** — Protection against excessive requests.
+- **express-rate-limit** — Request rate limiting.
 - **Morgan** — HTTP request logging.
 - **dotenv** — Environment variable configuration.
 - **Postman** — API testing.
 
-## 3. Prerequisites
+## 3. Project Structure
 
-Before running the application, install or prepare:
+```text
+101485935_COMP3123_Assignment1/
+├── config/          # Database configuration
+├── controllers/     # Request handlers and business logic
+├── logs/            # Local access and error logs
+├── middleware/      # Authentication and rate limiting
+├── models/          # Mongoose data models
+├── routes/          # API route definitions
+├── validators/      # Request validation rules
+├── .env.example     # Environment variable template
+├── .gitignore       # Git exclusions
+├── package.json     # Dependencies and npm scripts
+├── package-lock.json
+├── README.md
+└── server.js        # Application entry point
+```
 
-- Node.js and npm.
+## 4. Prerequisites
+
+Before running the application, ensure you have:
+
+- Node.js and npm installed.
 - A MongoDB Atlas account and database user.
-- Git.
+- Git installed.
 - Postman for testing API endpoints.
 
-## 4. Installation and Configuration
+## 5. Installation and Configuration
 
 ### Step 1: Clone the repository
 
@@ -49,7 +66,7 @@ npm install
 
 Create a `.env` file in the project root using `.env.example` as a template.
 
-Configure the following variables with your own values:
+Configure the following environment variables with your own values:
 
 ```dotenv
 PORT=3000
@@ -57,7 +74,7 @@ MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_long_random_secret
 ```
 
-Use your actual MongoDB Atlas connection string and a strong, private JWT secret. Do not commit your `.env` file or share real credentials.
+Use your MongoDB Atlas connection string and a strong, private JWT secret. Never commit your `.env` file or share actual credentials.
 
 ### Step 4: Start the application
 
@@ -73,11 +90,22 @@ For development with automatic restarts:
 npm run dev
 ```
 
-The server uses port `3000` by default when configured that way in the environment.
+## Starting MongoDB
 
-## 5. API Endpoints
+This application uses MongoDB Atlas as its database.
 
-| Method | Endpoint | Description | Success status |
+1. Sign in to MongoDB Atlas and open your database cluster.
+2. Ensure the cluster is running and accessible.
+3. Add your current IP address to the Atlas Network Access allowlist, if required.
+4. Create or verify a database user with the necessary database permissions.
+5. Set the `MONGODB_URI` environment variable in your local `.env` file using your own Atlas connection string.
+6. Start the application after confirming that the database connection settings are correct.
+
+The application uses port `3000` when `PORT=3000` is configured.
+
+## 6. API Endpoints
+
+| Method | Endpoint | Description | Success Status |
 |---|---|---|---|
 | GET | `/health` | Check API health | 200 OK |
 | POST | `/api/v1/user/signup` | Register a new user | 201 Created |
@@ -88,13 +116,13 @@ The server uses port `3000` by default when configured that way in the environme
 | PUT | `/api/v1/emp/employees/:eid` | Update an employee by ID | 200 OK |
 | DELETE | `/api/v1/emp/employees?eid=:eid` | Delete an employee by ID | 204 No Content |
 
-Protected employee endpoints require a valid JWT.
+All employee endpoints require a valid JWT.
 
-## 6. Authentication
+## 7. User Authentication
 
-### User registration
+### User Registration
 
-Send a `POST` request to:
+A POST request is sent to:
 
 `/api/v1/user/signup`
 
@@ -108,9 +136,11 @@ Example request body:
 }
 ```
 
-### User login
+A successful registration returns HTTP `201 Created`.
 
-Send a `POST` request to:
+### User Login
+
+You can log in with either your username or your password:
 
 `/api/v1/user/login`
 
@@ -123,21 +153,23 @@ Example request body:
 }
 ```
 
-The login endpoint also supports authentication using an email address instead of a username.
+Login also supports an email address instead of a username.
 
-A successful login returns a JWT. For protected requests in Postman, select **Authorization → Bearer Token** and provide the returned token.
+A successful login returns a JWT for accessing protected endpoints.
 
-Alternatively, send this HTTP header:
+### Authorization
 
-```text
-Authorization: Bearer YOUR_JWT_TOKEN
-```
+Every employee has a `user` field that stores the id of the user who created it. I never take that id from the request. The auth middleware reads it from the verified JWT, so a client can't choose who owns an employee.
 
-## 7. Employee Management
+When someone lists employees, I only look up the ones where `user` matches the logged-in user. For get, update and delete, I check that the employee belongs to the logged-in user before doing anything. Changing the `eid` in the URL doesn't help, because the ownership check still fails.
 
-All employee endpoints require authentication.
+When I tested with a second user trying to open the first user's employee, the API returned `404 Not Found`.
 
-Employee creation requires the employee details accepted by the API, including:
+## 8. Employee Management
+
+All employee management endpoints require authentication.
+
+Employee creation accepts the following fields:
 
 - `first_name`
 - `last_name`
@@ -147,47 +179,69 @@ Employee creation requires the employee details accepted by the API, including:
 - `date_of_joining`
 - `department`
 
-The API validates employee input and associates the new record with the authenticated user.
+Example of employee request body:
 
-The list, retrieve, and update operations restrict access to records owned by the logged-in user. Employee deletion identifies the record using the `eid` query parameter.
+```json
+{
+  "first_name": "John",
+  "last_name": "Smith",
+  "email": "john.smith@example.com",
+  "position": "Software Developer",
+  "salary": 65000,
+  "date_of_joining": "2026-01-15",
+  "department": "Engineering"
+}
+```
+The employee ID returned by the API for retrieval and updates. For deletion, the employee ID is provided through the `eid` query parameter.
 
-## 8. Security and Validation
+The API associates newly created employee records with the authenticated user and restricts employee retrieval and updates to records owned by that user.
 
-The application includes the following security measures:
+## 9. Security and Validation
 
-- Passwords are hashed using bcryptjs before storage.
-- JWT authentication protects employee endpoints.
-- Employee records are scoped to their owners.
-- Request validation checks submitted user and employee data.
-- Helmet configures HTTP security headers.
-- Rate limiting restricts excessive requests, including authentication attempts.
-- Environment variables hold sensitive configuration.
-- A centralized error handler handles application errors.
+- **Password hashing:** passwords are hashed with bcryptjs before they go into the database.
+- **JWT:** protects the employee routes.
+- **Helmet:** adds HTTP security headers. It helps protect against things like clickjacking and MIME sniffing, and it hides the `X-Powered-By` header.
+- **Rate limiting:** limits how many requests one client can make in a time window, so someone can't just keep guessing passwords. When the limit is passed, the API returns `429 Too Many Requests`.
+- **Validation:** I check the data for signup, login and employees with express-validator (required fields, email format, salary is a positive number, valid date, valid ObjectId). Bad input returns 400 with a JSON message.
+- **Environment variables:** the secrets live in `.env`, which is not in GitHub.
+- **Error handling:** errors come back as JSON with a consistent shape, and I don't send stack traces to the client.
 
-## 9. Logging
+## 10. Logging
 
-Morgan records HTTP request information. The application writes access and error logs to local files in the `logs/` directory.
+I use Morgan for request logging. The logs go to the `logs/` folder:
 
-These logs help with troubleshooting and monitoring API activity. Log files and environment secrets should not be committed to the repository.
+- `logs/access.log`: one line for each HTTP request
+- `logs/error.log`: application errors
 
-## 10. Testing
+I don't log passwords, JWTs or database credentials. The log files are in `.gitignore`, so I included a sample or screenshots in my submission instead.
 
-The API was tested using Postman.
+## 11. Testing
 
-Tests performed included:
+The API has been tested using Postman.
 
-- Successful user registration.
-- Successful user login and JWT generation.
-- Creating an employee with a valid token.
-- Listing the authenticated user's employee records.
+The main functional tests performed included:
+
+- User registration.
+- User login and JWT generation.
+- Employee creation.
+- Listing employee records.
 - Retrieving an employee by ID.
 - Updating an employee record.
 - Deleting an employee record.
-- Verifying that a second user cannot retrieve another user's employee record.
+- Checking that a second user cannot retrieve another user's employee record.
 
 The ownership test returned `404 Not Found`, as expected.
 
-## 11. Environment Variables and Secrets
+## 12 Health Check
 
-Use `.env.example` as a template for local configuration. Keep `.env` private and never commit actual database credentials or JWT secrets.
+**Endpoint:** `GET /health`
 
+This endpoint is used to confirm that the API server is responding.
+
+Expected response:
+
+`HTTP 200 OK`
+
+The response body should match the health-check response implemented in `server.js`.
+
+Screenshots of the tests, the MongoDB collections (with hashed passwords and the owner field) and the logs are included in my submission.
